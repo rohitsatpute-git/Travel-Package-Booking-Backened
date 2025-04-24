@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:5173']
+  origin: ['http://localhost:5173', 'https://travel-package-booking-frontend.vercel.app']
 }));
 app.use(express.json());
 app.use('/api', authRoutes);
