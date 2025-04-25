@@ -48,7 +48,7 @@ exports.deletePackage = async (req, res) => {
   }
 };
 
-exports.userBookings = async(req, res) => {
+exports.userBookings = async (req, res) => {
   try {
     const result = await User.aggregate([
       {
@@ -58,13 +58,50 @@ exports.userBookings = async(req, res) => {
           foreignField: 'user',
           as: 'bookings',
         }
+      },
+      {
+        $unwind: {
+          path: '$bookings',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'packages',
+          localField: 'bookings.package',
+          foreignField: '_id',
+          as: 'bookings.packageDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$bookings.packageDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: '$_id',
+          name: { $first: '$name' },
+          email: { $first: '$email' },
+          bookings: {
+            $push: {
+              _id: '$bookings._id',
+              status: '$bookings.status',
+              createdAt: '$bookings.createdAt',
+              package: '$bookings.packageDetails',
+            }
+          }
+        }
       }
     ]);
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch users and bookings' });
   }
-}
+};
+
 
 exports.pakageStatus = async(req, res) => {
   try {
@@ -83,7 +120,7 @@ exports.pakageStatus = async(req, res) => {
 
 }
 
-exports.bookingPerPackage = async(req, res) => {
+exports.bookingPerPackage = async (req, res) => {
   try {
     const result = await Booking.aggregate([
       {
@@ -105,15 +142,16 @@ exports.bookingPerPackage = async(req, res) => {
       },
       {
         $project: {
-          packageId: '$_id',
-          packageName: '$packageInfo.name',
+          _id: 0,
+          package: '$packageInfo', // include full package document
           count: 1,
         },
       }
     ]);
-    console.log('result', result)
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Failed to count bookings per package' });
   }
-}
+};
+
